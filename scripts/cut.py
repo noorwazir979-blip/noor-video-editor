@@ -34,8 +34,13 @@ import json
 import sys
 
 
+# Latin and Urdu punctuation (۔ full stop, ، comma, ؟ question mark, ؛ semicolon)
+PUNCT = ".,!?;:\u06D4\u060C\u061F\u061B"
+SENTENCE_END = (".", "?", "!", "\u06D4", "\u061F")
+
+
 def core(w):
-    return w.rstrip(".,!?;:")
+    return w.rstrip(PUNCT)
 
 
 def punct(w):
@@ -88,7 +93,7 @@ def main():
         seg_frames = round((b0 - a0) * fps)
         for k, w in enumerate(ws):
             text = w["word"]
-            if k == 0 and text[:1].islower() and (not out or punct(out[-1]["word"]) in (".", "?", "!")):
+            if k == 0 and text[:1].islower() and (not out or punct(out[-1]["word"]) in SENTENCE_END):
                 text = text[:1].upper() + text[1:]  # a take that starts a sentence mid-way still opens its caption
             nw = {
                 "word": text,

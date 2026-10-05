@@ -1,75 +1,74 @@
-# talking-head-reel
+# Noor Video Editor
 
-A Claude Code skill that turns a messy phone recording of you talking to
-camera (every line said three times, false starts, pauses, "okay, again")
-into a vertical reel for Instagram, TikTok or Shorts: the best take of each
-sentence, snap zooms on the cuts, word-timed captions, logos and callouts
-that land on the words you say, a few memes, an end card. One prompt, one
-recording, an `.mp4` on your Desktop.
+A free Claude Code skill by **Noor Zaman** (Abu Dhabi) that turns a phone video of you talking to camera into a
+finished vertical reel (TikTok / Instagram / YouTube Shorts) or a long-form 16:9 YouTube video, at the standard of
+top short-form creators, on an ordinary laptop. Built on
+[talking-head-reel](https://github.com/mariagorskikh/talking-head-reel) (MIT).
 
-## What you need
+You record yourself (retakes and mistakes are fine), hand Claude the file, and
+get back an `.mp4` with:
 
-- macOS with `ffmpeg` (`brew install ffmpeg`)
-- the `openai-whisper` CLI (`pip install openai-whisper`; the `turbo`
-  model downloads about 1.5 GB the first time)
-- Node 20 or newer
-- [Claude Code](https://claude.com/claude-code)
+- **Clean voice**: AI noise removal (DeepFilterNet), voice EQ, loudness at -16 LUFS
+- **Fast pace**: best take of each sentence, and every pause over 0.3 s cut (Silero VAD)
+- **A hook that is also the cover**: a headline on frame 0
+- **Bold word-by-word captions** (Hormozi style) in English, Urdu (Nastaliq),
+  Roman Urdu or Pashto, plus an optional English subtitle line
+- **Something new every ~2 s**: zoom snaps, emojis and callouts on the spoken word
+- **Show, don't tell**: website screenshots, headline cards, your own screen recordings
+- **Sound design**: risers, hits, swooshes, a "ka-ching" on prices, music that ducks under your voice
+- **Cut-out effects**: big words behind your head, swap the background (AI matting or a green cloth)
+- **Two posts from one recording**: the full reel and a 20-30 s reach cut
+- **A retention check** before rendering: fails if nothing changes on screen for 3 s
 
-## Install
+## Made for low-RAM machines
+
+No PyTorch, no OpenCV. Every step peaks at about 1.1-1.8 GB of RAM, so it runs
+on an 8 GB laptop or in WSL with 4 GB:
+
+| Step | Tool | Peak RAM (measured) |
+|---|---|---|
+| Speech to text | faster-whisper large-v3-turbo, int8 | ~1.7 GB (openai-whisper: 3-5 GB) |
+| Pause detection | Silero VAD, ONNX (2 MB) | ~0.1 GB, 1 s per minute |
+| Voice cleanup | DeepFilterNet prebuilt binary | ~0.3 GB |
+| Cut-out | Robust Video Matting, ONNX, half-size + ffmpeg upscale | ~1.1 GB |
+| Render | Remotion, tabs chosen from free RAM | ~0.9 GB per tab |
+
+Disk: ~0.5 GB for the toolset, ~0.8 GB for the speech model (downloaded once).
+
+## Install (Linux, macOS, or Windows with WSL)
+
+Needs `ffmpeg`, Node 20+, `curl`, [uv](https://docs.astral.sh/uv/) and
+[Claude Code](https://claude.com/claude-code).
 
 ```bash
-git clone https://github.com/mariagorskikh/talking-head-reel ~/.claude/skills/talking-head-reel
-cd ~/.claude/skills/talking-head-reel/remotion && npm install
+git clone https://github.com/noorwazir979-blip/noor-video-editor ~/.claude/skills/noor-video-editor
+bash ~/.claude/skills/noor-video-editor/scripts/setup-lite.sh
+cd ~/.claude/skills/noor-video-editor/remotion && npm install
 ```
 
-Then, in Claude Code, hand it your recording:
+Then in Claude Code:
 
-> Use talking-head-reel to edit ~/Downloads/IMG_1234.MOV for Instagram.
-> I did a lot of retakes, pick the best parts, remove the pauses, add
-> animations and zoom in and out, make it entertaining.
+> Use noor-video-editor to edit ~/Downloads/IMG_1234.MOV for Instagram. Language: Urdu,
+> captions in Roman Urdu with an English line. Make a short version too.
 
-Paste the script you meant to say if you have one; it helps the take
-selection. Expect 10 to 15 minutes of Claude working, most of it the
-render.
+Paste the script you meant to say if you have one; it helps take selection.
 
-## How it works
+## Credits
 
-1. `scripts/prep.sh` transcodes the portrait MOV to 1080x1920 at 30 fps so
-   Remotion can seek it cheaply.
-2. `scripts/transcribe.py` runs whisper with word timestamps on the whole
-   recording and prints the table of everything you said, every take.
-3. Claude picks the best take of each sentence
-   (`references/take-selection.md`) into `reel-segments.json`;
-   `scripts/cut.py` turns that into captions in edit time and a timeline.
-4. Claude plans the beats (spoken word to overlay) and writes a Remotion
-   timeline like `assets/Reel.example.tsx` with the components in
-   `assets/reel-overlays.tsx`: chip rows, big callouts, a list that gets
-   stamped, a quote card, a typed prompt, polaroids of your other takes, a
-   big logo or emoji next to your head, memes, an end card.
-5. `scripts/stills.sh` renders check frames at the key moments;
-   `scripts/render.sh` renders the reel.
+talking-head-reel (MIT) for the base pipeline and components; Remotion;
+faster-whisper / CTranslate2; Silero VAD (MIT); Robust Video Matting (GPL-3.0,
+model downloaded at setup, not redistributed); DeepFilterNet (MIT/Apache-2.0,
+binary downloaded at setup); Geist and Noto fonts (SIL OFL). Check each
+project's license before redistributing anything they ship.
 
-## What is in the box
+## Long-form YouTube
 
-- `SKILL.md`: the instructions Claude follows.
-- `scripts/`: prep, transcribe, cut, stills, render, contact sheet.
-- `assets/`: an example timeline and cut (placeholder timings of a
-  fictional recording, so they compile), the overlay components.
-- `references/`: how takes get chosen, the vertical layout, Instagram safe
-  zones, the zoom grammar.
-- `remotion/`: a minimal Remotion 4 project with the components, the
-  [Geist](https://vercel.com/font) fonts (SIL OFL 1.1), a small sound kit
-  generated by `remotion/scripts/make_sfx.py`, and logos from
-  [simple-icons](https://simpleicons.org) (CC0).
+Record in landscape and ask: *"Use noor-video-editor to make a long YouTube video from this, with chapters."*
+`assets/LongForm.example.tsx` puts you on the left third, teaching graphics on the right, a chapter card
+every 1-3 minutes (copy the times into the YouTube description) and a "save this" card at the end.
 
-## Notes
+## Licence
 
-- The example timeline expects a recording at
-  `remotion/public/talk/ig1080.mp4` and memes in `remotion/public/memes/`;
-  neither is in the repo. Run the pipeline on your own recording.
-- Memes are fetched at edit time from the imgflip template API and are
-  not redistributed here.
-- Paths in `SKILL.md` that say `src/`, `public/` or `out/` are inside
-  `remotion/`.
-
-Built with Claude Code. MIT.
+MIT (see `LICENSE`): use it, change it, share it, keep the credit lines.
+Rendering uses [Remotion](https://www.remotion.dev), which has its own licence: free for individuals, non-profits and
+companies with up to 3 employees; bigger companies need a Remotion company licence (remotion.pro/license).

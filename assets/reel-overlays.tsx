@@ -10,7 +10,7 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import { Card, Chip, FONT, MONO, Shadow, Word, ease } from "./overlays";
+import { CAPTION_BREAK, Card, Chip, FONT, MONO, Shadow, Word, ease, isPashto, isRtl, rtlCaption } from "./overlays";
 
 // Overlay grammar for the VERTICAL (1080x1920) talking-head reel. The
 // speaker is centred and fills the width, so there is no side column:
@@ -49,7 +49,7 @@ export const ReelCaptions: React.FC<{ words: Word[]; groupSize?: number; size?: 
   let cur: Word[] = [];
   for (const w of words) {
     cur.push(w);
-    const punct = /[.?!,]$/.test(w.word.trim());
+    const punct = CAPTION_BREAK.test(w.word.trim());
     if (cur.length >= groupSize || punct) {
       groups.push(cur);
       cur = [];
@@ -61,6 +61,10 @@ export const ReelCaptions: React.FC<{ words: Word[]; groupSize?: number; size?: 
   const gStart = g[0].start - 0.05;
   const a = ease(t, gStart, gStart + 0.1);
   const current = [...g].reverse().find((w) => t >= w.start - 0.02);
+  // Urdu and Pashto groups read right to left: the row flips so the first
+  // spoken word sits on the right, at a smaller size with a taller line.
+  const rtl = isRtl(g.map((w) => w.word).join(" "));
+  const box = rtl ? rtlCaption(isPashto(words)) : null;
   return (
     <div
       style={{
@@ -79,11 +83,13 @@ export const ReelCaptions: React.FC<{ words: Word[]; groupSize?: number; size?: 
         style={{
           background: "rgba(12,12,14,0.88)",
           borderRadius: 22,
-          padding: "16px 32px",
-          fontSize: size,
+          padding: box ? box.padding : "16px 32px",
+          fontSize: rtl ? Math.round(size * 0.85) : size,
           fontWeight: 800,
-          letterSpacing: -0.5,
-          lineHeight: 1.15,
+          letterSpacing: rtl ? 0 : -0.5,
+          lineHeight: box ? box.lineHeight : 1.15,
+          fontFamily: box ? box.fontFamily : FONT,
+          direction: rtl ? "rtl" : "ltr",
           display: "flex",
           flexWrap: "wrap",
           justifyContent: "center",

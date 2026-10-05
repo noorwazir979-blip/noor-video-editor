@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Run a noor-reel Python script with the light toolset (onnxruntime, numpy,
+# faster-whisper; no PyTorch). Install it once with setup-lite.sh.
+#   lpy <script.py> [args...]
+exec "${REEL_LITE:-$HOME/.local/share/reel-lite}/bin/python" "$@"

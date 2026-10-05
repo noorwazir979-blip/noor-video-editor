@@ -3,7 +3,8 @@
 and export the words the Remotion captions need.
 
     transcribe.py <talk.MOV> --out src/talk/words.json \
-        [--cut 12.4] [--end 95.0] [--fix "Cloud=Claude"]... [--model turbo]
+        [--cut 12.4] [--end 95.0] [--fix "Cloud=Claude"]... [--model turbo] \
+        [--language en|ur|ps|auto]
 
 Prints a segment table in ORIGINAL-recording seconds (the numbers you plan
 beats against), suggests a cut and an end when they are not given, and
@@ -17,30 +18,51 @@ What it fixes on the way out, because whisper gets these wrong every time:
     collapsed into one word spanning both
 The audio is extracted to 16 kHz mono first so whisper does not choke on
 the phone's multi-track container.
+
+--language picks what whisper listens for: "en" (default), "ur" for Urdu,
+"ps" for Pashto (both written in Arabic script; captions render right to
+left), or "auto" to let whisper detect it. Greetings and retake phrases are
+recognised in English, Urdu and Pashto whichever language is set.
 """
 import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
 
-WHISPER = "/opt/anaconda3/bin/whisper"  # openai-whisper CLI on this Mac
-STRONG_GREETING = re.compile(r"^(hey|hi|hello|welcome)\b", re.I)
-OUTTAKES = re.compile(r"(oh shit|oh no|let's do it again|let's do this again|let me do that again|do it again|one more time|take two|bye\.?$|see you soon|fuck|damn)", re.I)
+# openai-whisper CLI: $WHISPER if set, else whatever is on PATH (pipx puts it
+# in ~/.local/bin on Linux/WSL), else the author's Anaconda install on macOS.
+WHISPER = os.environ.get("WHISPER") or shutil.which("whisper") or "/opt/anaconda3/bin/whisper"
+STRONG_GREETING = re.compile(
+    r"^(hey|hi|hello|welcome"
+    r"|السلام|اسلام علیکم|سلام|ہیلو|ہائے|آداب|خوش آمدید"
+    # Pashto: "may you not be tired" (two spellings), "welcome" (two forms)
+    r"|ستړي مه شئ|ستړی مه شې|ښه راغلاست|هرکله)\b", re.I)
+OUTTAKES = re.compile(
+    r"(oh shit|oh no|let's do it again|let's do this again|let me do that again|do it again|one more time|take two|bye\.?$|see you soon|fuck|damn"
+    # Urdu: "again", "once more" (two spellings), "from the start",
+    # "it went wrong", "goodbye" (two forms)
+    r"|دوبارہ|پھر سے|ایک بار پھر|ایک دفعہ پھر|شروع سے|غلط ہو گیا|اللہ حافظ|خدا حافظ"
+    # Pashto: "once more", "from the start", "it went wrong", "goodbye" (two forms)
+    r"|یو ځل بیا|له سره|غلط شو|خدای پامان|په مخه)", re.I)
+# Latin and Urdu punctuation (۔ full stop, ، comma, ؟ question mark, ؛ semicolon)
+PUNCT = ".,!?;:\u06D4\u060C\u061F\u061B"
 
 
 def run(cmd, **kw):
     return subprocess.run(cmd, check=True, **kw)
 
 
-def transcribe(src, model):
+def transcribe(src, model, language):
     tmp = tempfile.mkdtemp(prefix="thead-")
     wav = os.path.join(tmp, "talk.wav")
     run(["ffmpeg", "-v", "error", "-y", "-i", src, "-vn", "-ac", "1", "-ar", "16000", wav])
     print(f"whisper {model} on {wav} ...", file=sys.stderr)
-    run([WHISPER, wav, "--model", model, "--language", "en", "--word_timestamps", "True",
+    lang = [] if language == "auto" else ["--language", language]
+    run([WHISPER, wav, "--model", model, *lang, "--word_timestamps", "True",
          "--output_format", "json", "--output_dir", tmp, "--fp16", "False"],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     with open(os.path.join(tmp, "talk.json")) as f:
@@ -81,7 +103,7 @@ def suggest_end(segments):
 
 
 def apply_fixes(word, fixes):
-    core = word.rstrip(".,!?;:")
+    core = word.rstrip(PUNCT)
     punct = word[len(core):]
     for old, new in fixes:
         if core == old:
@@ -104,9 +126,9 @@ def export(data, cut, end, fixes):
             out[-1]["word"] += w["word"]
             out[-1]["end"] = w["end"]
             continue
-        if out and out[-1]["word"].rstrip(".,!?").lower() == w["word"].rstrip(".,!?").lower():
+        if out and out[-1]["word"].rstrip(PUNCT).lower() == w["word"].rstrip(PUNCT).lower():
             out[-1]["end"] = w["end"]
-            out[-1]["word"] = w["word"] if w["word"][-1] in ".,!?" else out[-1]["word"]
+            out[-1]["word"] = w["word"] if w["word"][-1] in PUNCT else out[-1]["word"]
             continue
         out.append(w)
     for w in out:
@@ -123,10 +145,11 @@ def main():
     ap.add_argument("--end", type=float, help="original-recording seconds where the edit ends")
     ap.add_argument("--fix", action="append", default=[], help="OLD=NEW word replacement, repeatable")
     ap.add_argument("--model", default="turbo")
+    ap.add_argument("--language", default="en", help='whisper language code: "en", "ur" (Urdu), "ps" (Pashto), or "auto" to detect')
     ap.add_argument("--raw", help="reuse an existing whisper json instead of transcribing")
     a = ap.parse_args()
 
-    data = json.load(open(a.raw)) if a.raw else transcribe(a.src, a.model)
+    data = json.load(open(a.raw)) if a.raw else transcribe(a.src, a.model, a.language)
     raw_path = a.out.replace(".json", ".whisper.json")
     json.dump(data, open(raw_path, "w"))
     segs = [s for s in data["segments"] if s["text"].strip()]
