@@ -36,12 +36,12 @@ const glass = (accent = CYAN): React.CSSProperties => ({
 // Steps that build one at a time on the words; the arrow draws in first, then
 // the box. The newest step is yellow, earlier ones go white.
 // steps: [{ text: "Customer messages", icon: "💬", at: 12 }, ...]
-export const FlowSteps: React.FC<Box & { life: number; steps: { text: string; icon?: string; at: number }[]; title?: string }> = ({ life, steps, title, ...o }) => {
+export const FlowSteps: React.FC<Box & { life: number; steps: { text: string; icon?: string; at: number }[]; title?: string; cols?: number }> = ({ life, steps, title, cols: colsIn, ...o }) => {
   const { f, k } = useOpen(life, 8, 8);
   const { fps } = useVideoConfig();
   const b = useBand(o);
   const n = steps.length;
-  const cols = n <= 3 ? n : n === 4 ? 2 : 3;
+  const cols = colsIn ?? (n <= 3 ? n : n === 4 ? 2 : 3); // cols={1}: stacked, for a narrow side column
   const rows = Math.ceil(n / cols);
   const gap = 56;
   const top = title ? 64 : 0;

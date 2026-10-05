@@ -76,6 +76,18 @@ aimed at UAE owners.
 song). `MUSIC = false` for the Pashto series and anything aimed at Afghanistan
 or very conservative viewers, and when the creator adds a trending sound in the app.
 
+**App and brand logos.** Every time a video shows TikTok, Facebook, Instagram,
+WhatsApp, email, a phone call, YouTube, LinkedIn, X, Telegram, Snapchat, Messenger,
+Google Maps, Claude, Gemini or ChatGPT, use `assets/brands.tsx` (copy it with
+`brand-paths.ts` into src/talk/): `<BrandRow items={[{ name: "whatsapp", at }, ...]} />`
+for a row on the spoken words, `<BigBrand name="tiktok" />` for one big icon,
+`<BrandIcon />` inside any card. They draw the CURRENT logo (Simple Icons, latest
+release) in the official colours, shaped like the phone app icon. Never emojis, text
+letters ("f") or one-colour `public/icons/*.svg` for a brand: those render black-on-black
+or odd. Before a new video: `python3 S/scripts/update-brands.py` refreshes the logos;
+`assets/BrandTest.tsx` renders all of them on one sheet: look at it if a brand changed.
+Show a logo only when that app is named (nominative use, no implied endorsement).
+
 **Memes.** Imgflip memes read as a meme page, not as a business owner's
 advisor. No memes in buyer reels (series 1, 2, 5, 7, 8); fan reels (tiny
 tutorials, experiments) at most two.

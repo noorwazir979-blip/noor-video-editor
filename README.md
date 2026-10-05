@@ -18,6 +18,9 @@ get back an `.mp4` with:
 - **Sound design**: risers, hits, swooshes, a "ka-ching" on prices, music that ducks under your voice
 - **Cut-out effects**: big words behind your head, swap the background (AI matting or a green cloth)
 - **Two posts from one recording**: the full reel and a 20-30 s reach cut
+- **Real app logos**: TikTok, Instagram, WhatsApp, Facebook, YouTube, Gmail and more, in their current
+  official colours, shaped like the phone app icon (refreshed from Simple Icons with one command)
+- **Long-form YouTube**: chapters, teaching graphics beside you, captions in Urdu, Pashto or English
 - **A retention check** before rendering: fails if nothing changes on screen for 3 s
 
 ## Made for low-RAM machines
